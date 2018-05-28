@@ -4,6 +4,8 @@ import {HttpClient, HttpErrorResponse, HttpHeaders} from '@angular/common/http';
 import { Todo } from './todo';
 import {Observable, of} from 'rxjs';
 import {catchError, map} from 'rxjs/internal/operators';
+import {SessionService} from './session.service';
+import { RequestOptions } from '@angular/http';
 
 const API_URL = environment.apiUrl;
 
@@ -14,12 +16,14 @@ export class ApiService {
 
   constructor(
     private http: HttpClient,
+    private session: SessionService
   ) { }
 
   // API: GET /todos
   public getAllTodos(): Observable<Todo[]> {
+    const options = this.getRequestOptions();
     return this.http
-      .get(API_URL + '/todos')
+      .get(API_URL + '/todos', options)
       .pipe(
         map(response => {
           const todos = <any[]> response;
@@ -31,8 +35,9 @@ export class ApiService {
 
   // API: POST /todos
   public createTodo(todo: Todo): Observable<Todo> {
+    const options = this.getRequestOptions();
     return this.http
-      .post(API_URL + '/todos', todo)
+      .post(API_URL + '/todos', todo, options)
       .pipe(
         map(response => {
           return new Todo(response);
@@ -43,8 +48,9 @@ export class ApiService {
 
   // API: GET /todos/:id
   public getTodoById(todoId: number): Observable<Todo> {
+    const options = this.getRequestOptions();
     return this.http
-      .get(API_URL + '/todos/' + todoId)
+      .get(API_URL + '/todos/' + todoId, options)
       .pipe(
         map(response => {
           return new Todo(response);
@@ -55,8 +61,9 @@ export class ApiService {
 
   // API: PUT /todos/:id
   public updateTodo(todo: Todo): Observable<Todo> {
+    const options = this.getRequestOptions();
     return this.http
-      .put(API_URL + '/todos/' + todo.id, todo)
+      .put(API_URL + '/todos/' + todo.id, todo, options)
       .pipe(
         map(response => {
         return new Todo(response);
@@ -67,10 +74,23 @@ export class ApiService {
 
   // DELETE /todos/:id
   public deleteTodoById(todoId: number): Observable<null> {
+    const options = this.getRequestOptions();
     return this.http
-      .delete(API_URL + '/todos/' + todoId)
+      .delete(API_URL + '/todos/' + todoId, options)
       .pipe(map(response => null),
-        catchError(this.handleError<Todo[]>('deleteTodoById'))
+        catchError(this.handleError<null>('deleteTodoById'))
+      );
+  }
+
+  public signIn(username: string, password: string) {
+    return this.http
+      .post(API_URL + '/sign-in', {
+        username,
+        password
+      })
+      .pipe(
+        map(response => response),
+        catchError(this.handleError<null>('signIn'))
       );
   }
 
@@ -82,6 +102,12 @@ export class ApiService {
 
       // Let the app keep running by returning an empty result.
       return of(result as T);
+    };
+  }
+
+  private getRequestOptions() {
+    return {
+      headers: new HttpHeaders({'Authorization': 'Bearer ' + this.session.accessToken})
     };
   }
 }
